@@ -1,0 +1,26 @@
+{
+  "id": "./",
+  "name": "TideMon",
+  "short_name": "TideMon",
+  "description": "Tide prediction and current monitoring display.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#071a2e",
+  "theme_color": "#071a2e",
+  "icons": [
+    {
+      "src": "icons/tidemon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/tidemon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
