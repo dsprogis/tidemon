@@ -1,0 +1,1076 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Westport Harbor Dashboard</title>
+<style>
+  :root {
+    --bg:#eef2f3;
+    --card:#ffffff;
+    --ink:#14242a;
+    --muted:#607077;
+    --line:#315e6b;
+    --accent:#8faeb7;
+    --border:#d8e1e4;
+    --control-border:#bdcbd0;
+    --control-bg:#ffffff;
+    --grid:#d9e2e5;
+    --chart-text:#607077;
+    --moon-light:#d9dde0;
+    --moon-dark:#5f6b70;
+    --highlight:#14242a;
+    --shadow:rgba(20,36,42,.08);
+  }
+  * { box-sizing:border-box; }
+  html, body { width:100%; height:100%; overflow:hidden; }
+  body { margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; background:var(--bg); color:var(--ink); }
+  .wrap {
+    width:calc(100vw - 48px);
+    height:calc(100vh - 48px);
+    margin:24px;
+    padding:0;
+    display:flex;
+    flex-direction:column;
+  }
+  header { display:flex; justify-content:space-between; align-items:end; gap:20px; margin-bottom:18px; }
+  h1 { margin:0; font-size:clamp(26px,4vw,48px); letter-spacing:.04em; }
+  #clock { color:var(--muted); text-align:right; }
+  .grid { display:grid; grid-template-columns:minmax(0,2fr) minmax(320px,1fr); gap:18px; flex:1; min-height:0; align-items:stretch; overflow:hidden; }
+  .grid > section.card { display:flex; flex-direction:column; min-height:0; overflow:hidden; }
+  .card { background:var(--card); border-radius:18px; padding:22px; box-shadow:0 8px 26px var(--shadow); }
+  aside.card { overflow:hidden; }
+  .metrics { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; }
+  .tide-details { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .tide-details .value { font-size:clamp(18px,2.55vw,28.5px); }
+  .tide-details .small { font-size:75%; }
+  .metric { border:1px solid var(--border); border-radius:14px; padding:16px; }
+  .label { color:var(--muted); font-size:.88rem; text-transform:uppercase; letter-spacing:.08em; }
+  .value { font-size:clamp(24px,4vw,42px); font-weight:700; margin-top:4px; }
+  .small { color:var(--muted); margin-top:5px; }
+  .source-box { margin-top:14px; border:1px solid var(--border); border-radius:14px; padding:16px; }
+  .source-box select {
+    width:100%;
+    margin-top:10px;
+    padding:11px 12px;
+    border:1px solid var(--control-border);
+    border-radius:10px;
+    background:var(--control-bg);
+    color:var(--ink);
+    font:inherit;
+  }
+  .source-help { margin-top:8px; color:var(--muted); font-size:.82rem; line-height:1.35; }
+  .location-box { margin-top:14px; border:1px solid var(--border); border-radius:14px; padding:16px; }
+  .toggle-row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .location-actions { display:flex; align-items:center; gap:10px; }
+  .collapse-button {
+    border:0;
+    background:transparent;
+    color:var(--ink);
+    padding:2px 4px;
+    font:inherit;
+    font-size:1rem;
+    line-height:1;
+    cursor:pointer;
+  }
+  .collapse-button:hover { opacity:.7; }
+  .location-fields[hidden] { display:none; }
+  .theme-box {
+    margin-top:14px;
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:16px;
+  }
+  .theme-fields[hidden] { display:none; }
+  .theme-box select {
+    width:100%;
+    margin-top:10px;
+    padding:11px 12px;
+    border:1px solid var(--control-border);
+    border-radius:10px;
+    background:var(--control-bg);
+    color:var(--ink);
+    font:inherit;
+  }
+  .theme-preview {
+    display:flex;
+    gap:6px;
+    margin-top:10px;
+  }
+  .theme-swatch {
+    width:22px;
+    height:22px;
+    border-radius:6px;
+    border:1px solid var(--control-border);
+  }
+
+  body[data-theme="newport"] header,
+  body[data-theme="newport"] header .label,
+  body[data-theme="newport"] #clock {
+    color:#ffffff;
+  }
+
+  body[data-theme="newport"] .card,
+  body[data-theme="newport"] .metric,
+  body[data-theme="newport"] .moon-box,
+  body[data-theme="newport"] .source-box,
+  body[data-theme="newport"] .location-box,
+  body[data-theme="newport"] .theme-box {
+    color:#000000;
+  }
+
+  body[data-theme="newport"] .card .label,
+  body[data-theme="newport"] .card .small,
+  body[data-theme="newport"] .card .source-help,
+  body[data-theme="newport"] .card .field-label,
+  body[data-theme="newport"] .card .moon-detail,
+  body[data-theme="newport"] .card .moon-time-label {
+    color:#425168;
+  }
+
+  body[data-theme="newport"] .card select,
+  body[data-theme="newport"] .card input,
+  body[data-theme="newport"] .collapse-button {
+    color:#000000;
+  }
+  .moon-box + .tide-details { margin-top:14px; }
+  .moon-box {
+    margin-top:14px;
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:16px;
+  }
+  .moon-content {
+    display:flex;
+    align-items:center;
+    gap:14px;
+    margin-top:10px;
+  }
+  .moon-icon {
+    width:42px;
+    height:42px;
+    border-radius:50%;
+    background:var(--moon-light);
+    border:1px solid var(--control-border);
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.45);
+    position:relative;
+    overflow:hidden;
+    flex:0 0 auto;
+  }
+  .moon-icon::after {
+    content:"";
+    position:absolute;
+    inset:0;
+    border-radius:50%;
+    background:var(--moon-dark);
+    transform:translateX(var(--moon-shadow-x, 0%)) scaleX(var(--moon-shadow-scale, 1));
+    transform-origin:center;
+  }
+  .moon-name {
+    font-size:1.15rem;
+    font-weight:700;
+  }
+  .moon-detail {
+    margin-top:3px;
+    color:var(--muted);
+    font-size:.82rem;
+  }
+  .moon-times {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+    margin-top:12px;
+    padding-top:10px;
+    border-top:1px solid var(--border);
+  }
+  .moon-time-label {
+    color:var(--muted);
+    font-size:.72rem;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+  }
+  .moon-time-value {
+    margin-top:3px;
+    font-size:1rem;
+    font-weight:700;
+  }
+  .toggle {
+    position:relative;
+    width:48px;
+    height:26px;
+    flex:0 0 auto;
+  }
+  .toggle input { opacity:0; width:0; height:0; }
+  .toggle-slider {
+    position:absolute;
+    inset:0;
+    cursor:pointer;
+    background:#bdcbd0;
+    border-radius:999px;
+    transition:.2s;
+  }
+  .toggle-slider:before {
+    content:"";
+    position:absolute;
+    width:20px;
+    height:20px;
+    left:3px;
+    top:3px;
+    background:white;
+    border-radius:50%;
+    box-shadow:0 1px 4px rgba(0,0,0,.25);
+    transition:.2s;
+  }
+  .toggle input:checked + .toggle-slider { background:var(--line); }
+  .toggle input:checked + .toggle-slider:before { transform:translateX(22px); }
+  .location-fields.disabled { opacity:.45; }
+  .location-fields.disabled input { background:var(--bg); }
+  .field-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:10px; }
+  .field-grid .full { grid-column:1 / -1; }
+  .field-label { display:block; color:var(--muted); font-size:.78rem; text-transform:uppercase; letter-spacing:.06em; margin-bottom:6px; }
+  .location-box input {
+    width:100%;
+    padding:10px 11px;
+    border:1px solid var(--control-border);
+    border-radius:10px;
+    background:var(--control-bg);
+    color:var(--ink);
+    font:inherit;
+  }
+  canvas { width:100%; flex:1; min-height:300px; display:block; }
+  .status { margin-top:14px; color:var(--muted); }
+  .error { color:#9d2a2a; }
+  footer { margin-top:16px; color:var(--muted); font-size:.85rem; }
+  @media(max-width:800px){
+    html, body { overflow:auto; }
+    .wrap { width:calc(100vw - 28px); min-height:calc(100vh - 28px); height:auto; margin:14px; }
+    .grid{grid-template-columns:1fr;}
+    header{align-items:start;flex-direction:column;}
+    #clock{text-align:left;}
+  }
+
+  body[data-theme="newport"] header,
+  body[data-theme="newport"] header .label,
+  body[data-theme="newport"] #clock {
+    color:#ffffff;
+  }
+
+  body[data-theme="newport"] .grid > section.card {
+    background:#eef3ff;
+    color:#000000;
+    border:2px solid #87a9e8;
+  }
+
+  body[data-theme="newport"] aside.card {
+    background:#dce7ff;
+    color:#000000;
+    border:2px solid #87a9e8;
+  }
+
+  body[data-theme="newport"] .tide-card {
+    background:#ffffff;
+    border-color:#7398dc;
+  }
+
+  body[data-theme="newport"] .moon-box {
+    background:#bfd4ff;
+    border-color:#6f96dc;
+    color:#000000;
+  }
+
+  body[data-theme="newport"] .source-box {
+    background:#e9efff;
+    border-color:#8aa9e1;
+    color:#000000;
+  }
+
+  body[data-theme="newport"] .location-box {
+    background:#c9dcff;
+    border-color:#7198dd;
+    color:#000000;
+  }
+
+  body[data-theme="newport"] .theme-box {
+    background:#d8e5ff;
+    border-color:#7da0df;
+    color:#000000;
+  }
+
+  body[data-theme="newport"] .card .label,
+  body[data-theme="newport"] .card .small,
+  body[data-theme="newport"] .card .source-help,
+  body[data-theme="newport"] .card .field-label,
+  body[data-theme="newport"] .card .moon-detail,
+  body[data-theme="newport"] .card .moon-time-label,
+  body[data-theme="newport"] #status {
+    color:#17366f;
+  }
+
+  body[data-theme="newport"] .grid > section.card > .label,
+  body[data-theme="newport"] #status {
+    font-weight:600;
+  }
+
+  body[data-theme="newport"] .card select,
+  body[data-theme="newport"] .card input,
+  body[data-theme="newport"] .collapse-button {
+    color:#000000;
+  }
+
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1 id="locationTitle">WESTPORT HARBOR</h1>
+    </div>
+    <div id="clock"></div>
+  </header>
+
+  <div class="grid">
+    <section class="card">
+      <div id="chartSubtitle" class="label">Westport Harbor predicted tide — station 8447975</div>
+      <canvas id="chart" width="1000" height="360"></canvas>
+      <div id="status" class="status">Loading NOAA data…</div>
+    </section>
+
+    <aside class="card">
+      <div class="moon-box">
+        <div class="label">Moon Phase</div>
+        <div class="moon-content">
+          <div id="moonIcon" class="moon-icon" aria-hidden="true"></div>
+          <div>
+            <div id="moonName" class="moon-name">—</div>
+            <div id="moonDetail" class="moon-detail">Calculating current phase…</div>
+          </div>
+        </div>
+        <div class="moon-times">
+          <div>
+            <div class="moon-time-label">Moonrise</div>
+            <div id="moonriseTime" class="moon-time-value">—</div>
+          </div>
+          <div>
+            <div class="moon-time-label">Moonset</div>
+            <div id="moonsetTime" class="moon-time-value">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="tideDetails" class="metrics tide-details">
+        <div class="metric tide-card" data-kind="H">
+          <div class="label">Next high tide</div>
+          <div id="nextHighTime" class="value">—</div>
+          <div id="nextHighHeight" class="small">—</div>
+        </div>
+        <div class="metric tide-card" data-kind="L">
+          <div class="label">Next low tide</div>
+          <div id="nextLowTime" class="value">—</div>
+          <div id="nextLowHeight" class="small">—</div>
+        </div>
+      </div>
+
+      <div class="source-box">
+        <div class="label">NOAA Source</div>
+        <select id="sourceStation" aria-label="NOAA source station">
+          <option value="8452660" selected>Newport, RI — 8452660</option>
+        </select>
+      </div>
+
+      <div class="location-box">
+        <div class="toggle-row">
+          <div class="label">Predicted Location</div>
+          <div class="location-actions">
+            <button id="toggleLocationControls"
+                    class="collapse-button"
+                    type="button"
+                    aria-expanded="true"
+                    aria-controls="locationFields"
+                    aria-label="Hide predicted location controls"
+                    title="Hide predicted location controls">▼</button>
+            <label class="toggle" aria-label="Enable predicted location">
+              <input id="predictionEnabled" type="checkbox" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div id="locationFields" class="location-fields">
+          <div class="field-grid">
+            <label class="full">
+              <span class="field-label">Display title</span>
+              <input id="customTitle" type="text" value="Westport Harbor" autocomplete="off">
+            </label>
+            <label>
+              <span class="field-label">High offset (minutes)</span>
+              <input id="highOffset" type="number" value="9" step="1">
+            </label>
+            <label>
+              <span class="field-label">Low offset (minutes)</span>
+              <input id="lowOffset" type="number" value="33" step="1">
+            </label>
+          </div>
+          <div class="source-help">Positive values occur later than the selected NOAA source; negative values occur earlier.</div>
+        </div>
+      </div>
+
+      <div class="theme-box">
+        <div class="toggle-row">
+          <div class="label">Theme</div>
+          <button id="toggleThemeControls"
+                  class="collapse-button"
+                  type="button"
+                  aria-expanded="true"
+                  aria-controls="themeFields"
+                  aria-label="Hide theme controls"
+                  title="Hide theme controls">▼</button>
+        </div>
+
+        <div id="themeFields" class="theme-fields">
+          <select id="themePicker" aria-label="Dashboard theme">
+            <option value="greyscale" selected>Greyscale</option>
+            <option value="ocean">Ocean</option>
+            <option value="newport">Newport</option>
+            <option value="harbor">Harbor</option>
+            <option value="sunset">Sunset</option>
+            <option value="forest">Forest</option>
+            <option value="sand">Sand</option>
+            <option value="midnight">Midnight</option>
+            <option value="arctic">Arctic</option>
+            <option value="coral">Coral</option>
+            <option value="sage">Sage</option>
+            <option value="blackwhite">Black &amp; White</option>
+          </select>
+          <div id="themePreview" class="theme-preview" aria-hidden="true"></div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js"></script>
+<script>
+const API = "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter";
+const META_API = "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations.json?units=english";
+const stationMetadata = new Map();
+const common = "units=english&time_zone=lst_ldt&format=json&application=westport_harbor_dashboard";
+
+function url(params){ return `${API}?${params}&${common}`; }
+function parseLocal(s){ return new Date(s.replace(" ","T")); }
+function fmtTime(d){ return d.toLocaleTimeString([], {hour:"numeric", minute:"2-digit"}); }
+function dateCode(offsetDays){
+  const d=new Date();
+  d.setDate(d.getDate()+offsetDays);
+  return d.getFullYear()+String(d.getMonth()+1).padStart(2,"0")+String(d.getDate()).padStart(2,"0");
+}
+function interpolateTide(extrema, stepMinutes=6){
+  const out=[];
+  for(let i=0;i<extrema.length-1;i++){
+    const a=extrema[i], b=extrema[i+1];
+    const span=b.t-a.t;
+    const steps=Math.max(1,Math.round(span/(stepMinutes*60000)));
+    for(let j=0;j<steps;j++){
+      const f=j/steps;
+      // Half-cosine interpolation gives horizontal slopes at high and low tide.
+      const eased=(1-Math.cos(Math.PI*f))/2;
+      out.push({t:new Date(a.t.getTime()+span*f),v:a.v+(b.v-a.v)*eased});
+    }
+  }
+  if(extrema.length) out.push({t:extrema.at(-1).t,v:extrema.at(-1).v});
+  return out;
+}
+function nearest(points, when){
+  return points.reduce((a,b)=>Math.abs(b.t-when)<Math.abs(a.t-when)?b:a);
+}
+
+async function getJSON(u){
+  const r = await fetch(u);
+  if(!r.ok) throw new Error(`NOAA request failed: ${r.status}`);
+  const j = await r.json();
+  if(j.error) throw new Error(j.error.message || "NOAA returned an error");
+  return j;
+}
+
+function drawChart(allPoints){
+  const now = new Date();
+  const start = new Date(now);
+  start.setHours(0,0,0,0);
+  const end = new Date(start);
+  end.setDate(end.getDate()+1);
+
+  // Show only today's curve, while retaining extra NOAA points for interpolation.
+  const points = allPoints.filter(pt => pt.t >= start && pt.t <= end);
+  if(points.length < 2) return;
+
+  const c=document.getElementById("chart"), ctx=c.getContext("2d");
+  const rect=c.getBoundingClientRect(), dpr=window.devicePixelRatio||1;
+  const chartHeight=Math.max(300,rect.height || 390);
+  c.width=Math.round(rect.width*dpr); c.height=Math.round(chartHeight*dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+
+  const w=rect.width,h=chartHeight,p={l:76,r:22,t:24,b:64};
+  ctx.clearRect(0,0,w,h);
+
+  const vals=points.map(pt=>pt.v);
+  const min=Math.floor(Math.min(...vals))-0.5;
+  const max=Math.ceil(Math.max(...vals))+0.5;
+  const x=i=>p.l+i*(w-p.l-p.r)/(points.length-1);
+  const y=v=>p.t+(max-v)*(h-p.t-p.b)/(max-min);
+
+  ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue("--grid").trim();
+  ctx.lineWidth=1;
+  ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue("--chart-text").trim();
+  ctx.font="12px system-ui";
+
+  // Horizontal grid and Y tick labels.
+  for(let v=Math.ceil(min);v<=max;v++){
+    ctx.beginPath();
+    ctx.moveTo(p.l,y(v));
+    ctx.lineTo(w-p.r,y(v));
+    ctx.stroke();
+    ctx.textAlign="right";
+    ctx.fillText(v.toFixed(0),p.l-10,y(v)+4);
+  }
+
+  // Six evenly spaced X-axis labels.
+  const tickCount=6;
+  for(let n=0;n<=tickCount;n++){
+    const i=Math.round(n*(points.length-1)/tickCount);
+    const xpos=x(i);
+    ctx.beginPath();
+    ctx.moveTo(xpos,h-p.b);
+    ctx.lineTo(xpos,h-p.b+5);
+    ctx.stroke();
+    ctx.textAlign=n===0?"left":n===tickCount?"right":"center";
+    ctx.fillText(fmtTime(points[i].t),xpos,h-p.b+22);
+  }
+
+  // Axis titles.
+  ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue("--chart-text").trim();
+  ctx.font="13px system-ui";
+  ctx.textAlign="center";
+  ctx.fillText("Time of day",p.l+(w-p.l-p.r)/2,h-10);
+
+  ctx.save();
+  ctx.translate(18,p.t+(h-p.t-p.b)/2);
+  ctx.rotate(-Math.PI/2);
+  ctx.fillText("Tide height (ft above MLLW)",0,0);
+  ctx.restore();
+
+  // Tide curve.
+  ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue("--line").trim();
+  ctx.lineWidth=3;
+  ctx.beginPath();
+  points.forEach((pt,i)=> i?ctx.lineTo(x(i),y(pt.v)):ctx.moveTo(x(i),y(pt.v)));
+  ctx.stroke();
+
+  // Current-time marker when it falls within today's displayed range.
+  const nowMs=Date.now();
+  const idx=points.reduce((bi,pt,i)=>Math.abs(pt.t-nowMs)<Math.abs(points[bi].t-nowMs)?i:bi,0);
+  ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue("--highlight").trim();
+  ctx.beginPath();
+  ctx.arc(x(idx),y(points[idx].v),6,0,Math.PI*2);
+  ctx.fill();
+}
+
+async function loadStations(){
+  const select=document.getElementById("sourceStation");
+  const selected="8452660";
+
+  try{
+    const r=await fetch(META_API);
+    if(!r.ok) throw new Error("Station catalog request failed");
+    const data=await r.json();
+    const stations=(data.stations||[])
+      .filter(s=>s && s.id && s.name)
+      .sort((a,b)=>{
+        const sa=(a.state||"").localeCompare(b.state||"");
+        return sa || a.name.localeCompare(b.name);
+      });
+
+    select.innerHTML="";
+    for(const s of stations){
+      const option=document.createElement("option");
+      option.value=String(s.id);
+      const region=s.state ? ", "+s.state : "";
+      option.textContent=s.name+region+" — "+s.id;
+      if(String(s.id)===selected) option.selected=true;
+      select.appendChild(option);
+
+      const lat=Number(s.lat);
+      const lon=Number(s.lng ?? s.lon);
+      if(Number.isFinite(lat) && Number.isFinite(lon)){
+        stationMetadata.set(String(s.id),{lat,lon,name:s.name,state:s.state||""});
+      }
+    }
+
+    if(![...select.options].some(o=>o.value===selected)){
+      const option=document.createElement("option");
+      option.value=selected;
+      option.textContent="Newport, RI — 8452660";
+      option.selected=true;
+      select.insertBefore(option,select.firstChild);
+    }
+  }catch(e){
+    // Keep the built-in Newport option if the station catalog cannot load.
+  }
+
+  if(!stationMetadata.has("8452660")){
+    stationMetadata.set("8452660",{
+      lat:41.505,
+      lon:-71.3267,
+      name:"Newport",
+      state:"RI"
+    });
+  }
+
+  await load();
+}
+async function load(){
+  const select=document.getElementById("sourceStation");
+  const station=select?.value || "8452660";
+  const selectedOption=select?.options[select.selectedIndex];
+  const stationLabel=selectedOption?.textContent || "Newport, RI — 8452660";
+  const stationName=stationLabel.split(" — ")[0];
+
+  const predictionEnabled=document.getElementById("predictionEnabled").checked;
+  const enteredTitle=document.getElementById("customTitle").value.trim();
+  const highOffset=predictionEnabled ? (Number(document.getElementById("highOffset").value) || 0) : 0;
+  const lowOffset=predictionEnabled ? (Number(document.getElementById("lowOffset").value) || 0) : 0;
+  const displayTitle=predictionEnabled ? (enteredTitle || stationName) : stationName;
+  const hasOffsets=predictionEnabled && (highOffset!==0 || lowOffset!==0);
+
+  document.getElementById("status").textContent="Loading NOAA data for "+displayTitle+"…";
+  document.getElementById("locationTitle").textContent=displayTitle.toUpperCase();
+  document.getElementById("chartSubtitle").textContent=predictionEnabled
+    ? displayTitle+" prediction from "+stationName+" — station "+station
+    : stationName+" predicted tide — station "+station;
+
+  updateMoonTimes();
+
+  try{
+    let points=[];
+    let curveMode="NOAA six-minute predictions";
+
+    const hiloResponse=await getJSON(
+      url("product=predictions&begin_date="+dateCode(-1)+"&end_date="+dateCode(2)+
+          "&station="+encodeURIComponent(station)+"&datum=MLLW&interval=hilo")
+    );
+
+    const sourceHilo=(hiloResponse.predictions||[]).map(p=>({
+      t:parseLocal(p.t),
+      v:+p.v,
+      type:p.type
+    }));
+
+    if(sourceHilo.length < 2){
+      throw new Error("No usable high/low tide predictions were returned for this station.");
+    }
+
+    const adjustedHilo=sourceHilo.map(p=>({
+      ...p,
+      sourceTime:p.t,
+      t:new Date(p.t.getTime()+((p.type==="H" ? highOffset : lowOffset)*60000))
+    })).sort((a,b)=>a.t-b.t);
+
+    if(hasOffsets){
+      points=interpolateTide(adjustedHilo);
+      curveMode="curve adjusted from NOAA high/low predictions";
+    }else{
+      try{
+        const predResponse=await getJSON(
+          url("product=predictions&begin_date="+dateCode(-1)+"&end_date="+dateCode(1)+
+              "&station="+encodeURIComponent(station)+"&datum=MLLW&interval=6")
+        );
+        points=(predResponse.predictions||[]).map(p=>({t:parseLocal(p.t),v:+p.v}));
+      }catch(e){
+        points=[];
+      }
+
+      if(points.length < 2){
+        points=interpolateTide(adjustedHilo);
+        curveMode="curve interpolated from NOAA high/low predictions";
+      }
+    }
+
+    drawChart(points);
+
+    const now=Date.now();
+    const nextHigh=adjustedHilo.find(p=>p.type==="H" && p.t>now);
+    const nextLow=adjustedHilo.find(p=>p.type==="L" && p.t>now);
+
+    document.getElementById("nextHighTime").textContent=nextHigh ? fmtTime(nextHigh.t) : "—";
+    document.getElementById("nextHighHeight").textContent=nextHigh
+      ? nextHigh.v.toFixed(1)+" ft above MLLW"
+      : "No upcoming high returned";
+
+    document.getElementById("nextLowTime").textContent=nextLow ? fmtTime(nextLow.t) : "—";
+    document.getElementById("nextLowHeight").textContent=nextLow
+      ? nextLow.v.toFixed(1)+" ft above MLLW"
+      : "No upcoming low returned";
+
+    const details=document.getElementById("tideDetails");
+    if(nextHigh && nextLow){
+      const first=nextHigh.t < nextLow.t ? "H" : "L";
+      const second=first==="H" ? "L" : "H";
+      [first,second].forEach(kind=>{
+        const card=details.querySelector('.tide-card[data-kind="'+kind+'"]');
+        if(card) details.appendChild(card);
+      });
+    }
+
+    const correctionText=hasOffsets
+      ? " · offsets H "+(highOffset>=0?"+":"")+highOffset+" min, L "+(lowOffset>=0?"+":"")+lowOffset+" min"
+      : "";
+
+    document.getElementById("status").textContent=
+      "Updated "+new Date().toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})+
+      " · "+curveMode+correctionText;
+  }catch(e){
+    document.getElementById("status").innerHTML='<span class="error">'+e.message+'</span>';
+    document.getElementById("nextHighTime").textContent="—";
+    document.getElementById("nextHighHeight").textContent="Unavailable";
+    document.getElementById("nextLowTime").textContent="—";
+    document.getElementById("nextLowHeight").textContent="Unavailable";
+  }
+}
+function syncPredictionControls(){
+  const enabled=document.getElementById("predictionEnabled").checked;
+  const fields=document.getElementById("locationFields");
+  fields.classList.toggle("disabled",!enabled);
+  ["customTitle","highOffset","lowOffset"].forEach(id=>{
+    document.getElementById(id).disabled=!enabled;
+  });
+}
+
+function toggleLocationControls(){
+  const fields=document.getElementById("locationFields");
+  const button=document.getElementById("toggleLocationControls");
+  const willHide=!fields.hidden;
+  fields.hidden=willHide;
+  button.setAttribute("aria-expanded",String(!willHide));
+  button.textContent=willHide ? "▲" : "▼";
+  button.setAttribute(
+    "aria-label",
+    willHide ? "Show predicted location controls" : "Hide predicted location controls"
+  );
+  button.title=willHide ? "Show predicted location controls" : "Hide predicted location controls";
+}
+
+function formatAstronomyTime(value){
+  if(!value) return "No event today";
+  const d=value instanceof Date ? value : new Date(value);
+  if(Number.isNaN(d.getTime())) return "Unavailable";
+  return d.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"});
+}
+
+function localDayBounds(date=new Date()){
+  const start=new Date(date);
+  start.setHours(0,0,0,0);
+  const end=new Date(start);
+  end.setDate(end.getDate()+1);
+  return {start,end};
+}
+
+function findMoonEventToday(observer,direction,start,end){
+  // Search slightly before local midnight to ensure events near the boundary
+  // are not missed, then keep only events occurring during the local date.
+  const searchStart=new Date(start.getTime()-6*60*60*1000);
+  let cursor=searchStart;
+
+  for(let attempt=0;attempt<3;attempt++){
+    const event=Astronomy.SearchRiseSet(
+      Astronomy.Body.Moon,
+      observer,
+      direction,
+      cursor,
+      2
+    );
+
+    if(!event) return null;
+
+    const eventDate=event.date instanceof Date ? event.date : new Date(event.date);
+
+    if(eventDate>=start && eventDate<end) return eventDate;
+    if(eventDate>=end) return null;
+
+    cursor=new Date(eventDate.getTime()+60*1000);
+  }
+
+  return null;
+}
+
+async function updateMoonTimes(){
+  const station=document.getElementById("sourceStation")?.value || "8452660";
+  const metadata=stationMetadata.get(station);
+
+  const rise=document.getElementById("moonriseTime");
+  const set=document.getElementById("moonsetTime");
+
+  if(!metadata){
+    rise.textContent="Location unavailable";
+    set.textContent="Location unavailable";
+    return;
+  }
+
+  if(typeof Astronomy==="undefined"){
+    rise.textContent="Library unavailable";
+    set.textContent="Library unavailable";
+    return;
+  }
+
+  try{
+    const observer=new Astronomy.Observer(metadata.lat,metadata.lon,0);
+    const {start,end}=localDayBounds(new Date());
+
+    const moonrise=findMoonEventToday(observer,+1,start,end);
+    const moonset=findMoonEventToday(observer,-1,start,end);
+
+    rise.textContent=formatAstronomyTime(moonrise);
+    set.textContent=formatAstronomyTime(moonset);
+  }catch(e){
+    console.error("Moon time calculation failed:",e);
+    rise.textContent="Unavailable";
+    set.textContent="Unavailable";
+  }
+}
+
+
+function getMoonPhase(date=new Date()){
+  // Approximate lunar phase based on a known new moon epoch.
+  const synodicMonth=29.530588853;
+  const knownNewMoon=Date.UTC(2000,0,6,18,14,0);
+  const days=(date.getTime()-knownNewMoon)/86400000;
+  const age=((days % synodicMonth)+synodicMonth)%synodicMonth;
+  const fraction=age/synodicMonth;
+  const illumination=(1-Math.cos(2*Math.PI*fraction))/2;
+
+  const phases=[
+    {max:0.0625,name:"New Moon"},
+    {max:0.1875,name:"Waxing Crescent"},
+    {max:0.3125,name:"First Quarter"},
+    {max:0.4375,name:"Waxing Gibbous"},
+    {max:0.5625,name:"Full Moon"},
+    {max:0.6875,name:"Waning Gibbous"},
+    {max:0.8125,name:"Last Quarter"},
+    {max:0.9375,name:"Waning Crescent"},
+    {max:1.0001,name:"New Moon"}
+  ];
+
+  const phase=phases.find(p=>fraction<p.max) || phases[0];
+  return {
+    ...phase,
+    age,
+    illumination:Math.round(illumination*100)
+  };
+}
+
+function updateMoonPhase(){
+  const moon=getMoonPhase(new Date());
+  const icon=document.getElementById("moonIcon");
+
+  // Draw the phase using only greys. The dark overlay shifts and narrows
+  // across the lunar cycle to suggest waxing and waning.
+  const phase=moon.age/29.530588853;
+  let shadowX=0;
+  let shadowScale=1;
+
+  if(phase < 0.5){
+    shadowX=(phase/0.5)*100;
+    shadowScale=Math.max(0.02,1-(phase/0.5));
+  }else{
+    shadowX=-((phase-0.5)/0.5)*100;
+    shadowScale=Math.max(0.02,(phase-0.5)/0.5);
+  }
+
+  if(moon.name==="New Moon"){
+    shadowX=0;
+    shadowScale=1;
+  }else if(moon.name==="Full Moon"){
+    shadowX=100;
+    shadowScale=0.02;
+  }
+
+  icon.style.setProperty("--moon-shadow-x",shadowX+"%");
+  icon.style.setProperty("--moon-shadow-scale",shadowScale);
+
+  document.getElementById("moonName").textContent=moon.name;
+  document.getElementById("moonDetail").textContent=
+    moon.illumination+"% illuminated · lunar age "+moon.age.toFixed(1)+" days";
+}
+
+const THEMES={
+  greyscale:{
+    bg:"#eef2f3",card:"#ffffff",ink:"#14242a",muted:"#607077",
+    line:"#315e6b",accent:"#8faeb7",border:"#d8e1e4",
+    controlBorder:"#bdcbd0",controlBg:"#ffffff",grid:"#d9e2e5",
+    moonLight:"#d9dde0",moonDark:"#5f6b70",highlight:"#14242a",shadow:"rgba(20,36,42,.08)"
+  },
+  ocean:{
+    bg:"#dcecf6",card:"#f8fcff",ink:"#081f3d",muted:"#365f7c",
+    line:"#0b3d91",accent:"#1597bb",border:"#9fc5dd",
+    controlBorder:"#6fa7c7",controlBg:"#f8fcff",grid:"#bfd9e8",
+    moonLight:"#b9d5e4",moonDark:"#274f6f",highlight:"#081f3d",
+    shadow:"rgba(8,31,61,.16)"
+  },
+  newport:{
+    bg:"#153a8a",card:"#edf3ff",ink:"#ffffff",muted:"#eaf0ff",
+    line:"#000000",accent:"#8fb6ff",border:"#8eafea",
+    controlBorder:"#17366f",controlBg:"#ffffff",grid:"#6f84a8",chartText:"#000000",
+    moonLight:"#ffffff",moonDark:"#17366f",highlight:"#d62828",
+    shadow:"rgba(0,0,0,.32)"
+  },
+  harbor:{
+    bg:"#dfecea",card:"#fbfefd",ink:"#0f3432",muted:"#3d6662",
+    line:"#0f6b63",accent:"#2aa198",border:"#abcfc9",
+    controlBorder:"#78b5ad",controlBg:"#fbfefd",grid:"#c4ddd9",
+    moonLight:"#bfd8d4",moonDark:"#315f5a",highlight:"#0f3432",shadow:"rgba(15,52,50,.14)"
+  },
+  sunset:{
+    bg:"#f7e2d6",card:"#fff9f5",ink:"#5a2118",muted:"#8e4f3d",
+    line:"#c94f2d",accent:"#f28c28",border:"#e8bca8",
+    controlBorder:"#d89479",controlBg:"#fff9f5",grid:"#efcfc0",
+    moonLight:"#e6c2b3",moonDark:"#8a4a38",highlight:"#c94f2d",shadow:"rgba(90,33,24,.15)"
+  },
+  forest:{
+    bg:"#e3eee2",card:"#fbfef9",ink:"#173523",muted:"#4f725a",
+    line:"#1f6f43",accent:"#5f9f52",border:"#b7d2b7",
+    controlBorder:"#8eb58d",controlBg:"#fbfef9",grid:"#cadfc9",
+    moonLight:"#c5d8c3",moonDark:"#476548",highlight:"#173523",shadow:"rgba(23,53,35,.14)"
+  },
+  sand:{
+    bg:"#efe2c7",card:"#fffaf0",ink:"#4a3214",muted:"#7d6036",
+    line:"#9b6b24",accent:"#d29a3a",border:"#ddc291",
+    controlBorder:"#c6a45f",controlBg:"#fffaf0",grid:"#e7d4ad",
+    moonLight:"#ddcfb3",moonDark:"#6e5635",highlight:"#9b6b24",shadow:"rgba(74,50,20,.14)"
+  },
+  midnight:{
+    bg:"#08111f",card:"#101d2d",ink:"#f1f7fb",muted:"#9bb4c7",
+    line:"#2f81f7",accent:"#7c3aed",border:"#1f3550",
+    controlBorder:"#315376",controlBg:"#142338",grid:"#1c3047",
+    moonLight:"#b9c9d6",moonDark:"#3e5870",highlight:"#2f81f7",shadow:"rgba(0,0,0,.36)"
+  },
+  arctic:{
+    bg:"#e8f7fb",card:"#ffffff",ink:"#123a50",muted:"#4c7f92",
+    line:"#008fb3",accent:"#56c7df",border:"#b2deea",
+    controlBorder:"#82c7d9",controlBg:"#fbfeff",grid:"#cbe8ef",
+    moonLight:"#c4e5ed",moonDark:"#447586",highlight:"#008fb3",shadow:"rgba(18,58,80,.12)"
+  },
+  coral:{
+    bg:"#fbe3e3",card:"#fffafa",ink:"#5b2330",muted:"#915061",
+    line:"#d1495b",accent:"#ff7f6e",border:"#e9b4bc",
+    controlBorder:"#d98693",controlBg:"#fffafa",grid:"#f0c9cf",
+    moonLight:"#e7c4c9",moonDark:"#844c57",highlight:"#d1495b",shadow:"rgba(91,35,48,.14)"
+  },
+  sage:{
+    bg:"#e8eee2",card:"#fcfef9",ink:"#2b3d2d",muted:"#5f765f",
+    line:"#5c7f58",accent:"#8fa66b",border:"#c7d5bf",
+    controlBorder:"#a8bd9e",controlBg:"#fcfef9",grid:"#d6e0d0",
+    moonLight:"#d0d9ca",moonDark:"#5c6c57",highlight:"#5c7f58",shadow:"rgba(43,61,45,.12)"
+  },
+  blackwhite:{
+    bg:"#ffffff",card:"#ffffff",ink:"#000000",muted:"#000000",
+    line:"#000000",accent:"#000000",border:"#000000",
+    controlBorder:"#000000",controlBg:"#ffffff",grid:"#000000",
+    moonLight:"#ffffff",moonDark:"#000000",highlight:"#000000",shadow:"rgba(0,0,0,.18)"
+  }
+};
+
+function applyTheme(name){
+  const theme=THEMES[name] || THEMES.greyscale;
+  const root=document.documentElement;
+  document.body.dataset.theme=name;
+  root.style.setProperty("--bg",theme.bg);
+  root.style.setProperty("--card",theme.card);
+  root.style.setProperty("--ink",theme.ink);
+  root.style.setProperty("--muted",theme.muted);
+  root.style.setProperty("--line",theme.line);
+  root.style.setProperty("--accent",theme.accent);
+  root.style.setProperty("--border",theme.border);
+  root.style.setProperty("--control-border",theme.controlBorder);
+  root.style.setProperty("--control-bg",theme.controlBg);
+  root.style.setProperty("--grid",theme.grid);
+  root.style.setProperty("--chart-text",theme.chartText || theme.muted);
+  root.style.setProperty("--moon-light",theme.moonLight);
+  root.style.setProperty("--moon-dark",theme.moonDark);
+  root.style.setProperty("--highlight",theme.highlight || theme.ink);
+  root.style.setProperty("--shadow",theme.shadow);
+  updateThemePreview(theme);
+  localStorage.setItem("westportTheme",name);
+  load();
+}
+
+function updateThemePreview(theme){
+  const preview=document.getElementById("themePreview");
+  if(!preview) return;
+  preview.innerHTML="";
+  [theme.bg,theme.card,theme.line,theme.accent,theme.ink].forEach(color=>{
+    const swatch=document.createElement("span");
+    swatch.className="theme-swatch";
+    swatch.style.background=color;
+    preview.appendChild(swatch);
+  });
+}
+
+function toggleThemeControls(){
+  const fields=document.getElementById("themeFields");
+  const button=document.getElementById("toggleThemeControls");
+  const willHide=!fields.hidden;
+  fields.hidden=willHide;
+  button.setAttribute("aria-expanded",String(!willHide));
+  button.textContent=willHide ? "▲" : "▼";
+  button.setAttribute("aria-label",willHide ? "Show theme controls" : "Hide theme controls");
+  button.title=willHide ? "Show theme controls" : "Hide theme controls";
+}
+
+function tick(){
+  document.getElementById("clock").innerHTML =
+    new Date().toLocaleDateString([], {weekday:"long",month:"long",day:"numeric"})+"<br>"+
+    new Date().toLocaleTimeString([], {hour:"numeric",minute:"2-digit"});
+}
+tick(); setInterval(tick,1000);
+updateMoonPhase();
+setInterval(updateMoonPhase,60*60*1000);
+setInterval(updateMoonTimes,60*60*1000);
+syncPredictionControls();
+loadStations();
+
+document.getElementById("sourceStation").addEventListener("change",()=>{
+  document.getElementById("predictionEnabled").checked=false;
+  syncPredictionControls();
+  load();
+});
+
+document.getElementById("predictionEnabled").addEventListener("change",()=>{
+  syncPredictionControls();
+  load();
+});
+
+document.getElementById("toggleLocationControls").addEventListener("click",toggleLocationControls);
+document.getElementById("toggleThemeControls").addEventListener("click",toggleThemeControls);
+
+const savedTheme=localStorage.getItem("westportTheme") || "greyscale";
+document.getElementById("themePicker").value=savedTheme;
+applyTheme(savedTheme);
+
+document.getElementById("themePicker").addEventListener("change",event=>{
+  applyTheme(event.target.value);
+});
+
+let inputTimer;
+["customTitle","highOffset","lowOffset"].forEach(id=>{
+  document.getElementById(id).addEventListener("input",()=>{
+    clearTimeout(inputTimer);
+    inputTimer=setTimeout(load,350);
+  });
+});
+
+setInterval(load,6*60*1000);
+let resizeTimer;
+addEventListener("resize",()=>{
+  clearTimeout(resizeTimer);
+  resizeTimer=setTimeout(load,200);
+});
+</script>
+</body>
+</html>
