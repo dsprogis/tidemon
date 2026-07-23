@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta name="tidemon-version" content="2026.07.21.6">
+  <meta name="tidemon-version" content="2026.07.21.11">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>TideMon Dashboard</title>
@@ -76,15 +76,9 @@
     .moon-box { margin-top:0; }
     .moon-content { display:flex; align-items:center; gap:14px; margin-top:10px; }
     .moon-icon {
-      width:42px; height:42px; border-radius:50%; background:var(--moon-light);
-      border:1px solid var(--control-border); position:relative; overflow:hidden; flex:0 0 auto;
-      box-shadow:inset 0 0 0 1px rgba(255,255,255,.45);
+      width:50px; height:50px; position:relative; overflow:hidden; flex:0 0 auto;
     }
-    .moon-icon::after {
-      content:""; position:absolute; inset:0; border-radius:50%; background:var(--moon-dark);
-      transform:translateX(var(--moon-shadow-x,0%)) scaleX(var(--moon-shadow-scale,1));
-      transform-origin:center;
-    }
+    .moon-icon svg { display:block; width:100%; height:100%; }
     .moon-name { font-size:1.15rem; font-weight:700; }
     .moon-detail { margin-top:3px; color:var(--muted); font-size:.82rem; }
     .moon-times {
@@ -127,6 +121,23 @@
     .theme-select { margin-top:10px; }
     .theme-preview { display:flex; gap:6px; margin-top:9px; }
     .theme-swatch { width:22px; height:22px; border-radius:6px; border:1px solid var(--control-border); }
+    .brand-block {
+      margin-top:16px; padding:10px 12px 4px; display:flex; flex-direction:row;
+      align-items:center; justify-content:center; gap:14px; text-align:left;
+    }
+    .brand-mark {
+      width:68px; height:68px; display:block; flex:0 0 auto;
+      filter:drop-shadow(0 3px 10px rgba(0,0,0,.08));
+    }
+    .brand-text { display:flex; flex-direction:column; justify-content:center; min-width:0; }
+    .brand-name {
+      margin-top:0; font-size:1.25rem; font-weight:800; letter-spacing:.08em;
+      text-transform:uppercase; color:var(--ink); line-height:1.05;
+    }
+    .brand-tag {
+      margin-top:4px; font-size:.75rem; letter-spacing:.10em; text-transform:uppercase;
+      color:var(--muted); line-height:1.15;
+    }
     canvas { width:100%; flex:1; min-height:300px; display:block; }
     .status { margin-top:14px; color:var(--muted); }
     .error { color:#9d2a2a; }
@@ -248,6 +259,27 @@
           </section>
         </div>
       </div>
+
+      <div class="brand-block" aria-label="TideMon logo and name">
+        <svg class="brand-mark" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="TideMon logo">
+          <defs>
+            <linearGradient id="tmGlow" x1="0" x2="1" y1="0" y2="1">
+              <stop offset="0%" stop-color="var(--control-bg)"/>
+              <stop offset="100%" stop-color="var(--accent)" stop-opacity="0.35"/>
+            </linearGradient>
+          </defs>
+          <circle cx="48" cy="48" r="42" fill="url(#tmGlow)" stroke="var(--border)" stroke-width="2.2"/>
+          <path d="M18 54c7-8 15-12 24-12s17 4 24 12 17 12 23 12" fill="none" stroke="var(--line)" stroke-width="5" stroke-linecap="round"/>
+          <path d="M14 64c7-6 15-9 24-9s17 3 24 9 17 9 28 7" fill="none" stroke="var(--accent)" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
+          <path d="M62 22a10 10 0 1 1-6-18 8.5 8.5 0 1 0 6 18Z" fill="var(--highlight)"/>
+          <circle cx="66" cy="25" r="1.8" fill="var(--highlight)" opacity="0.45"/>
+          <circle cx="73" cy="31" r="1.4" fill="var(--highlight)" opacity="0.35"/>
+        </svg>
+        <div class="brand-text">
+          <div class="brand-name">TideMon</div>
+          <div class="brand-tag">Coastal Tide Dashboard</div>
+        </div>
+      </div>
     </aside>
   </div>
 </div>
@@ -272,6 +304,10 @@ let loadSequence = 0;
 function url(params){ return `${API}?${params}&${common}`; }
 function parseLocal(s){ return new Date(s.replace(" ","T")); }
 function fmtTime(d){ return d.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}); }
+function fmtHourCompact(d){
+  const hour=d.getHours();
+  return `${hour%12||12}${hour<12?"a":"p"}`;
+}
 function normalize(value){ return String(value ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,""); }
 function stationLabel(s){ return `${s.name}${s.state ? ", "+s.state : ""}`; }
 function selectedStationId(){ return activeStationId || DEFAULT_STATION; }
@@ -515,7 +551,7 @@ function drawChart(allPoints){
   ctx.clearRect(0,0,w,h);
   const vals=points.map(pt=>pt.v);
   const min=Math.floor(Math.min(...vals))-0.5,max=Math.ceil(Math.max(...vals))+0.5;
-  const x=i=>p.l+i*(w-p.l-p.r)/(points.length-1);
+  const xTime=t=>p.l+(t-start)*(w-p.l-p.r)/(end-start);
   const y=v=>p.t+(max-v)*(h-p.t-p.b)/(max-min);
   const styles=getComputedStyle(document.documentElement);
 
@@ -526,12 +562,16 @@ function drawChart(allPoints){
     ctx.beginPath(); ctx.moveTo(p.l,y(v)); ctx.lineTo(w-p.r,y(v)); ctx.stroke();
     ctx.textAlign="right"; ctx.fillText(v.toFixed(0),p.l-10,y(v)+4);
   }
-  const tickCount=6;
-  for(let n=0;n<=tickCount;n++){
-    const i=Math.round(n*(points.length-1)/tickCount),xpos=x(i);
+  const tickHours=2;
+  for(let hour=0;hour<=24;hour+=tickHours){
+    const tickTime=new Date(start);
+    tickTime.setHours(hour,0,0,0);
+    const xpos=xTime(tickTime);
     ctx.beginPath(); ctx.moveTo(xpos,h-p.b); ctx.lineTo(xpos,h-p.b+5); ctx.stroke();
-    ctx.textAlign=n===0?"left":n===tickCount?"right":"center";
-    ctx.fillText(fmtTime(points[i].t),xpos,h-p.b+22);
+    if(hour%4===0){
+      ctx.textAlign=hour===0?"left":hour===24?"right":"center";
+      ctx.fillText(fmtHourCompact(tickTime),xpos,h-p.b+22);
+    }
   }
   ctx.font="13px system-ui"; ctx.textAlign="center";
   ctx.fillText("Time of day",p.l+(w-p.l-p.r)/2,h-10);
@@ -539,12 +579,12 @@ function drawChart(allPoints){
   ctx.fillText("Tide height (ft above MLLW)",0,0); ctx.restore();
 
   ctx.strokeStyle=styles.getPropertyValue("--line").trim(); ctx.lineWidth=3; ctx.beginPath();
-  points.forEach((pt,i)=>i?ctx.lineTo(x(i),y(pt.v)):ctx.moveTo(x(i),y(pt.v))); ctx.stroke();
+  points.forEach((pt,i)=>i?ctx.lineTo(xTime(pt.t),y(pt.v)):ctx.moveTo(xTime(pt.t),y(pt.v))); ctx.stroke();
 
   const nowMs=Date.now();
   const idx=points.reduce((best,pt,i)=>Math.abs(pt.t-nowMs)<Math.abs(points[best].t-nowMs)?i:best,0);
   ctx.fillStyle=styles.getPropertyValue("--highlight").trim();
-  ctx.beginPath(); ctx.arc(x(idx),y(points[idx].v),6,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(xTime(points[idx].t),y(points[idx].v),6,0,Math.PI*2); ctx.fill();
 }
 
 async function loadTides(){
@@ -624,14 +664,58 @@ function getMoonPhase(date=new Date()){
   ];
   return {name:phases.find(([max])=>fraction<max)[1],age,illumination:Math.round(illumination*100)};
 }
+function renderMoonIcon(phaseName){
+  const outline='<circle cx="21" cy="21" r="20" fill="none" stroke="var(--control-border)" stroke-width="1.1"/>';
+  const darkBase='<circle cx="21" cy="21" r="20" fill="var(--moon-dark)"/>';
+  const craterTexture=`
+    <g opacity="0.95">
+      <circle cx="13" cy="13" r="3.2" fill="rgba(0,0,0,.12)" stroke="rgba(255,255,255,.20)" stroke-width="0.6"/>
+      <circle cx="25.5" cy="10.5" r="2.2" fill="rgba(0,0,0,.10)" stroke="rgba(255,255,255,.18)" stroke-width="0.5"/>
+      <circle cx="29" cy="18" r="3.8" fill="rgba(0,0,0,.11)" stroke="rgba(255,255,255,.16)" stroke-width="0.6"/>
+      <circle cx="11.8" cy="24.2" r="2.5" fill="rgba(0,0,0,.10)" stroke="rgba(255,255,255,.16)" stroke-width="0.5"/>
+      <circle cx="19" cy="20.5" r="1.6" fill="rgba(0,0,0,.08)" stroke="rgba(255,255,255,.14)" stroke-width="0.4"/>
+      <circle cx="16.5" cy="31" r="3.5" fill="rgba(0,0,0,.12)" stroke="rgba(255,255,255,.16)" stroke-width="0.6"/>
+      <circle cx="27.5" cy="29.5" r="2.8" fill="rgba(0,0,0,.10)" stroke="rgba(255,255,255,.15)" stroke-width="0.5"/>
+      <circle cx="33.2" cy="24.8" r="1.5" fill="rgba(0,0,0,.08)" stroke="rgba(255,255,255,.12)" stroke-width="0.35"/>
+      <ellipse cx="22.2" cy="34.5" rx="2.2" ry="1.4" fill="rgba(0,0,0,.08)" stroke="rgba(255,255,255,.12)" stroke-width="0.35"/>
+    </g>`;
+  const highlight='<circle cx="14.5" cy="14" r="4" fill="rgba(255,255,255,.10)"/><circle cx="25.5" cy="27" r="2.4" fill="rgba(255,255,255,.08)"/>';
+  let maskContent='';
+  switch(phaseName){
+    case 'New Moon':
+      maskContent='';
+      break;
+    case 'Waxing Crescent':
+      maskContent='<circle cx="31" cy="21" r="20" fill="white"/>';
+      break;
+    case 'First Quarter':
+      maskContent='<rect x="21" y="1" width="20" height="40" fill="white"/>';
+      break;
+    case 'Waxing Gibbous':
+      maskContent='<circle cx="21" cy="21" r="20" fill="white"/><circle cx="4" cy="21" r="20" fill="black"/>';
+      break;
+    case 'Full Moon':
+      maskContent='<circle cx="21" cy="21" r="20" fill="white"/>';
+      break;
+    case 'Waning Gibbous':
+      maskContent='<circle cx="21" cy="21" r="20" fill="white"/><circle cx="38" cy="21" r="20" fill="black"/>';
+      break;
+    case 'Last Quarter':
+      maskContent='<rect x="1" y="1" width="20" height="40" fill="white"/>';
+      break;
+    case 'Waning Crescent':
+      maskContent='<circle cx="11" cy="21" r="20" fill="white"/>';
+      break;
+    default:
+      maskContent='<circle cx="21" cy="21" r="20" fill="white"/>';
+  }
+  const defs=`<defs><clipPath id="moonClip"><circle cx="21" cy="21" r="20"/></clipPath><mask id="illumMask"><rect x="0" y="0" width="42" height="42" fill="black"/>${maskContent}</mask></defs>`;
+  const body=`${darkBase}<circle cx="21" cy="21" r="20" fill="var(--moon-light)" mask="url(#illumMask)" clip-path="url(#moonClip)"/><g mask="url(#illumMask)" clip-path="url(#moonClip)">${craterTexture}${highlight}</g>`;
+  return `<svg viewBox="0 0 42 42" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">${defs}${body}${outline}</svg>`;
+}
 function updateMoonPhase(){
-  const moon=getMoonPhase(),phase=moon.age/29.530588853,icon=document.getElementById("moonIcon");
-  let shadowX=phase<.5?(phase/.5)*100:-((phase-.5)/.5)*100;
-  let shadowScale=phase<.5?Math.max(.02,1-phase/.5):Math.max(.02,(phase-.5)/.5);
-  if(moon.name==="New Moon"){ shadowX=0; shadowScale=1; }
-  if(moon.name==="Full Moon"){ shadowX=100; shadowScale=.02; }
-  icon.style.setProperty("--moon-shadow-x",`${shadowX}%`);
-  icon.style.setProperty("--moon-shadow-scale",shadowScale);
+  const moon=getMoonPhase(),icon=document.getElementById("moonIcon");
+  icon.innerHTML=renderMoonIcon(moon.name);
   document.getElementById("moonName").textContent=moon.name;
   document.getElementById("moonDetail").textContent=`${moon.illumination}% illuminated · lunar age ${moon.age.toFixed(1)} days`;
 }
