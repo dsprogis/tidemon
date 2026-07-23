@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta name="tidemon-version" content="2026.07.21.11">
+  <meta name="tidemon-version" content="2026.07.21.12">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>TideMon Dashboard</title>
@@ -304,6 +304,13 @@ let loadSequence = 0;
 function url(params){ return `${API}?${params}&${common}`; }
 function parseLocal(s){ return new Date(s.replace(" ","T")); }
 function fmtTime(d){ return d.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}); }
+function fmtCompactTideTime(d){
+  const parts=new Intl.DateTimeFormat([], {hour:"numeric",minute:"2-digit",hour12:true}).formatToParts(d);
+  const hour=parts.find(p=>p.type==="hour")?.value||"";
+  const minute=parts.find(p=>p.type==="minute")?.value||"00";
+  const dayPeriod=(parts.find(p=>p.type==="dayPeriod")?.value||"").toLowerCase().startsWith("p")?"p":"a";
+  return `${hour}:${minute}${dayPeriod}`;
+}
 function fmtHourCompact(d){
   const hour=d.getHours();
   return `${hour%12||12}${hour<12?"a":"p"}`;
@@ -629,9 +636,9 @@ async function loadTides(){
     const now=Date.now();
     const nextHigh=hilo.find(p=>p.type==="H"&&p.t>now);
     const nextLow=hilo.find(p=>p.type==="L"&&p.t>now);
-    document.getElementById("nextHighTime").textContent=nextHigh?fmtTime(nextHigh.t):"—";
+    document.getElementById("nextHighTime").textContent=nextHigh?fmtCompactTideTime(nextHigh.t):"—";
     document.getElementById("nextHighHeight").textContent=nextHigh?`${nextHigh.v.toFixed(1)} ft above MLLW`:"No upcoming high returned";
-    document.getElementById("nextLowTime").textContent=nextLow?fmtTime(nextLow.t):"—";
+    document.getElementById("nextLowTime").textContent=nextLow?fmtCompactTideTime(nextLow.t):"—";
     document.getElementById("nextLowHeight").textContent=nextLow?`${nextLow.v.toFixed(1)} ft above MLLW`:"No upcoming low returned";
 
     const details=document.getElementById("tideDetails");
